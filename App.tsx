@@ -1,20 +1,36 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Login from "./components/Login";
+import Formulario from "./components/Formulario";
 
-export default function App() {
+const App = () => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loggedIn, setLoggedIn] = useState(true);
+
   return (
     <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
+      {!loggedIn && (
+        <Login
+          username={username}
+          password={password}
+          setLoggedIn={setLoggedIn}
+          setUsername={setUsername}
+          setPassword={setPassword}
+        />
+      )}
+      {loggedIn && <Formulario />}
     </View>
   );
-}
+};
+
+export default App;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: "#fff",
+    justifyContent: "center",
   },
 });
