@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
 } from "react-native";
 import PerguntaEscala from "./perguntas/PerguntaEscala";
 import PerguntaMultipla from "./perguntas/PerguntaMultipla";
@@ -145,6 +146,33 @@ const Formulario = () => {
 
   const setRespostaEscalaQ14 = (item: string, valor: number) => {
     setRespostaQ14((prev) => ({ ...prev, [item]: valor }));
+  };
+
+  // Criar o JSON das respostas
+  const enviarRespostas = () => {
+    const respostas = {
+      tipoVinhoSelecionado,
+      frequenciaConsumoSelecionada,
+      grauConhecimentoSelecionado,
+      respostaQ4,
+      respostaQ5,
+      respostaQ6,
+      respostaQ7,
+      respostaQ8,
+      respostaQ9,
+      respostaQ10,
+      respostasQ11,
+      respostasQ12,
+      respostaQ13,
+      respostaQ14,
+      respostaQ15,
+      respostaQ16,
+    };
+
+    const jsonRespostas = JSON.stringify(respostas, null, 2);
+
+    Alert.alert("Respostas enviadas", jsonRespostas);
+    console.log("Respostas enviadas:", jsonRespostas);
   };
 
   return (
@@ -296,7 +324,7 @@ const Formulario = () => {
         styles={styles}
       />
 
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={enviarRespostas}>
         <Text style={styles.buttonText}>Enviar</Text>
       </TouchableOpacity>
     </ScrollView>
