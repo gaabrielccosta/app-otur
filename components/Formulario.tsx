@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  View,
   Text,
   TouchableOpacity,
   ScrollView,
@@ -13,14 +12,9 @@ import PerguntaUnica from "./perguntas/PerguntaUnica";
 
 const Formulario = () => {
   // Estados para as respostas
-  const [tipoVinhoSelecionado, setTipoVinhoSelecionado] = useState<
-    string | null
-  >(null);
-  const [frequenciaConsumoSelecionada, setFrequenciaConsumoSelecionada] =
-    useState<string | null>(null);
-  const [grauConhecimentoSelecionado, setGrauConhecimentoSelecionado] =
-    useState<string | null>(null);
-
+  const [respostaQ1, setRespostaQ1] = useState<string | null>(null);
+  const [respostaQ2, setRespostaQ2] = useState<string | null>(null);
+  const [respostaQ3, setRespostaQ3] = useState<string | null>(null);
   const [respostaQ4, setRespostaQ4] = useState<string | null>(null);
   const [respostaQ5, setRespostaQ5] = useState<string | null>(null);
   const [respostaQ6, setRespostaQ6] = useState<string | null>(null);
@@ -30,14 +24,15 @@ const Formulario = () => {
   const [respostaQ10, setRespostaQ10] = useState<string[]>([]);
   const [respostasQ11, setRespostasQ11] = useState<Record<string, number>>({});
   const [respostasQ12, setRespostasQ12] = useState<Record<string, number>>({});
-
   const [respostaQ13, setRespostaQ13] = useState<string | null>(null);
   const [respostaQ14, setRespostaQ14] = useState<Record<string, number>>({});
   const [respostaQ15, setRespostaQ15] = useState<string | null>(null);
   const [respostaQ16, setRespostaQ16] = useState<string[]>([]);
 
-  // Dados das perguntas
+  const [naoRespondeu, setNaoRespondeu] = useState(false);
+  const [respostasEnviadas, setRespostasEnviadas] = useState(false);
 
+  // Dados das perguntas
   const opcoesTipoVinho = [
     "Tinto",
     "Branco",
@@ -151,9 +146,9 @@ const Formulario = () => {
   // Criar o JSON das respostas
   const enviarRespostas = () => {
     const respostas = {
-      tipoVinhoSelecionado,
-      frequenciaConsumoSelecionada,
-      grauConhecimentoSelecionado,
+      respostaQ1,
+      respostaQ2,
+      respostaQ3,
       respostaQ4,
       respostaQ5,
       respostaQ6,
@@ -169,10 +164,41 @@ const Formulario = () => {
       respostaQ16,
     };
 
-    const jsonRespostas = JSON.stringify(respostas, null, 2);
+    let algumaNaoRespondida = Object.values(respostas).some(
+      perguntaNaoRespondida
+    );
 
+    if (!algumaNaoRespondida) {
+      if (
+        Object.keys(respostaQ14).length != 9 ||
+        Object.keys(respostasQ12).length != 9 ||
+        Object.keys(respostasQ11).length != 6
+      )
+        algumaNaoRespondida = true;
+    }
+
+    if (algumaNaoRespondida) {
+      setNaoRespondeu(true);
+      setRespostasEnviadas(false);
+      return;
+    }
+
+    setNaoRespondeu(false);
+    setRespostasEnviadas(true);
+
+    const jsonRespostas = JSON.stringify(respostas, null, 2);
     Alert.alert("Respostas enviadas", jsonRespostas);
     console.log("Respostas enviadas:", jsonRespostas);
+  };
+
+  const perguntaNaoRespondida = (value: any) => {
+    if (value === null || value === undefined) return true;
+
+    if (Array.isArray(value)) return value.length === 0;
+
+    if (typeof value === "object") return Object.keys(value).length === 0;
+
+    return false;
   };
 
   return (
@@ -184,24 +210,24 @@ const Formulario = () => {
       <PerguntaUnica
         pergunta="Questão 01 - Qual tipo de vinho você prefere?"
         opcoes={opcoesTipoVinho}
-        valorSelecionado={tipoVinhoSelecionado}
-        onSelecionar={setTipoVinhoSelecionado}
+        valorSelecionado={respostaQ1}
+        onSelecionar={setRespostaQ1}
         styles={styles}
       />
 
       <PerguntaUnica
         pergunta="Questão 02 - Com que frequência consome vinho?"
         opcoes={opcoesFrequenciaConsumo}
-        valorSelecionado={frequenciaConsumoSelecionada}
-        onSelecionar={setFrequenciaConsumoSelecionada}
+        valorSelecionado={respostaQ2}
+        onSelecionar={setRespostaQ2}
         styles={styles}
       />
 
       <PerguntaUnica
         pergunta="Questão 03 - Qual seu grau de conhecimento sobre vinho?"
         opcoes={opcoesGrauConhecimento}
-        valorSelecionado={grauConhecimentoSelecionado}
-        onSelecionar={setGrauConhecimentoSelecionado}
+        valorSelecionado={respostaQ3}
+        onSelecionar={setRespostaQ3}
         styles={styles}
       />
 
@@ -327,6 +353,14 @@ const Formulario = () => {
       <TouchableOpacity style={styles.button} onPress={enviarRespostas}>
         <Text style={styles.buttonText}>Enviar</Text>
       </TouchableOpacity>
+      {naoRespondeu && (
+        <Text style={styles.naoRespondeuText}>
+          Você não respondeu todas as perguntas!
+        </Text>
+      )}
+      {respostasEnviadas && (
+        <Text style={styles.respostasEnviadasText}>Respostas enviadas!</Text>
+      )}
     </ScrollView>
   );
 };
@@ -406,6 +440,16 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  naoRespondeuText: {
+    color: "red",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  respostasEnviadasText: {
+    color: "green",
     fontWeight: "600",
     fontSize: 16,
   },
