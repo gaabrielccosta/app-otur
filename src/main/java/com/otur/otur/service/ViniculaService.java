@@ -127,6 +127,8 @@ public class ViniculaService {
         Vinicula vinicula = viniculaRepository.findById(id.longValue()).orElse(null);
         if (vinicula == null) return;
 
+        List<Avaliacao> avaliacoes = avaliacaoRepository.findByVinicula(vinicula);
+        avaliacaoRepository.deleteAll(avaliacoes);
         viniculaRepository.deleteById(id.longValue());
     }
 
