@@ -5,17 +5,22 @@ import com.otur.otur.entity.Foto;
 import com.otur.otur.entity.User;
 import com.otur.otur.entity.Vinicula;
 import com.otur.otur.repository.AvaliacaoRepository;
+import com.otur.otur.repository.FotoRepository;
 import com.otur.otur.repository.UserRepository;
 import com.otur.otur.repository.ViniculaRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
 
 @Service
 public class ViniculaService {
@@ -23,14 +28,19 @@ public class ViniculaService {
     private final ViniculaRepository viniculaRepository;
     private final AvaliacaoRepository avaliacaoRepository;
     private final UserRepository userRepository;
+    private final FotoRepository fotoRepository;
 
-    // pasta onde as fotos serão salvas (pode ajustar ou externalizar via @Value)
-    private static final String UPLOAD_DIR = "uploads";
+    @Value("${upload.dir}")
+    private String uploadDirPath;
 
-    public ViniculaService(ViniculaRepository viniculaRepository, AvaliacaoRepository avaliacaoRepository, UserRepository userRepository) {
+    public ViniculaService(ViniculaRepository viniculaRepository,
+                           AvaliacaoRepository avaliacaoRepository,
+                           UserRepository userRepository,
+                           FotoRepository fotoRepository) {
         this.viniculaRepository = viniculaRepository;
         this.avaliacaoRepository = avaliacaoRepository;
         this.userRepository = userRepository;
+        this.fotoRepository = fotoRepository;
     }
 
     public List<Vinicula> listar() {
@@ -39,64 +49,91 @@ public class ViniculaService {
 
     @Transactional
     public void postar(
+            Integer id,
             String nome,
             String horarios,
             String instagram,
             String localizacao,
+            String novo,
             MultipartFile[] files
     ) {
-        // Cria entidade principal
-        Vinicula vin = new Vinicula();
+        // 1) Cria entidade Vinicula
+        Vinicula vin = null;
+        if (novo != null && novo.equals("false")) {
+            vin = viniculaRepository.findById(id.longValue()).orElse(null);
+        }
+        if (vin == null) {
+            vin = new Vinicula();
+        } else {
+            apagarFotosVinicula(id);
+        }
+
         vin.setNome(nome);
         vin.setHorarios(horarios);
         vin.setInstagram(instagram);
         vin.setLocalizacao(localizacao);
 
-        // Garante lista inicializada
-        if (vin.getFotos() == null) {
-            vin.setFotos(new java.util.ArrayList<>());
+        // 2) Cria lista de fotos
+        List<Foto> listaFotos = new ArrayList<>();
+
+        // 3) Garante que o diretório existe (throws em caso de falha)
+        Path uploadPath = Paths.get(uploadDirPath);
+        try {
+            Files.createDirectories(uploadPath);
+        } catch (IOException e) {
+            throw new RuntimeException("Não foi possível criar pasta de upload", e);
         }
 
-        // Garante existência do diretório
-        File uploadDir = new File(UPLOAD_DIR);
-        if (!uploadDir.exists()) {
-            uploadDir.mkdirs();
-        }
-
-        // Processa cada arquivo
+        // 4) Processa cada arquivo
         if (files != null) {
-            Arrays.stream(files)
-                    .filter(f -> f != null && !f.isEmpty())
-                    .forEach(file -> {
-                        try {
-                            // gera nome único
-                            String original = file.getOriginalFilename();
-                            String ext = "";
-                            if (original != null && original.contains(".")) {
-                                ext = original.substring(original.lastIndexOf("."));
-                            }
-                            String filename = UUID.randomUUID().toString() + ext;
+            for (MultipartFile file : files) {
+                if (file.isEmpty()) continue;
 
-                            // salva em disco
-                            File destino = new File(uploadDir, filename);
-                            file.transferTo(destino);
+                // pega nome original e extensão
+                String original = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+                String ext = "";
+                int idx = original.lastIndexOf('.');
+                if (idx > 0) {
+                    ext = original.substring(idx);
+                }
 
-                            // monta e adiciona a entidade Foto
-                            Foto foto = new Foto();
-                            foto.setNome(original);
-                            foto.setCaminho(UPLOAD_DIR + "/" + filename);
-                            foto.setVinicula(vin);
-                            vin.getFotos().add(foto);
+                // gera nome único
+                String filename = UUID.randomUUID() + ext;
+                Path destino = uploadPath.resolve(filename);
 
-                        } catch (IOException e) {
-                            throw new RuntimeException(
-                                    "Erro ao salvar imagem " + file.getOriginalFilename(), e
-                            );
-                        }
-                    });
+                // copia o conteúdo do MultipartFile para o destino
+                try (InputStream in = file.getInputStream()) {
+                    Files.copy(in, destino, StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException e) {
+                    throw new RuntimeException("Erro ao salvar imagem " + original, e);
+                }
+
+                // monta entidade Foto
+                Foto foto = new Foto();
+                foto.setNome(original);
+                foto.setCaminho(destino.toString().split("/")[destino.toString().split("/").length - 1]);
+                foto.setVinicula(vin);
+                foto.setTipo(file.getContentType());
+                listaFotos.add(foto);
+            }
         }
 
+        vin.setFotos(listaFotos);
         viniculaRepository.save(vin);
+    }
+
+    @Transactional
+    public void apagar(Integer id) {
+        Vinicula vinicula = viniculaRepository.findById(id.longValue()).orElse(null);
+        if (vinicula == null) return;
+
+        viniculaRepository.deleteById(id.longValue());
+    }
+
+    @Transactional
+    public void apagarFotosVinicula(Integer id) {
+        List<Foto> fotos = fotoRepository.findAllByViniculaId(id.longValue());
+        fotoRepository.deleteAll(fotos);
     }
 
     public List<Avaliacao> listarAvaliacoes(Long viniculaId) {

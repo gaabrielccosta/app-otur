@@ -1,11 +1,11 @@
 package com.otur.otur.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
-import java.util.ArrayList;
 
 @Entity
 @Table(name = "viniculas")
@@ -28,7 +28,8 @@ public class Vinicula {
     @Column(nullable = false)
     private String localizacao;
 
-    @OneToMany(mappedBy = "vinicula", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Foto> fotos = new ArrayList<>();
+    @OneToMany(mappedBy="vinicula", cascade=CascadeType.ALL)
+    @JsonManagedReference
+    private List<Foto> fotos;
 }
 

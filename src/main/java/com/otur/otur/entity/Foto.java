@@ -1,5 +1,6 @@
 package com.otur.otur.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,10 +24,11 @@ public class Foto {
     @Column(nullable = false)
     private String tipo;
 
-    @Column(name = "conteudo", nullable = false)
+    @Column(name = "caminho", nullable = false)
     private String caminho;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vinicula_id", nullable = false)
+    @JsonBackReference
     private Vinicula vinicula;
 }
