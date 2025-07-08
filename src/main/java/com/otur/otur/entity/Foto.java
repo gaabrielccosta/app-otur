@@ -23,9 +23,8 @@ public class Foto {
     @Column(nullable = false)
     private String tipo;
 
-    @Lob
     @Column(name = "conteudo", nullable = false)
-    private byte[] conteudo;
+    private String caminho;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vinicula_id", nullable = false)
